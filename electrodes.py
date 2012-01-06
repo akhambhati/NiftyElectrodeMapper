@@ -8,6 +8,8 @@ information
 # Visualization Libraries
 import vtk
 
+# Standard Libraries
+import math
 
 class Electrode:
     global sphereRadius
@@ -17,6 +19,7 @@ class Electrode:
         # Set the electrode placement cursor
         self.channelCursor = self.__CreateChannelRepresentationActor()
         self.channelCursor.GetProperty().SetColor(0, 1, 0)
+        self.channelCursor.PickableOff()
 
         # Instantiate an collection for positioned channel actors
         self.channelActors = vtk.vtkActorCollection()
@@ -36,10 +39,11 @@ class Electrode:
 
         return sphereActor
 
-    def UpdateChannelCursor(self, x, y, z, deleteCursor = 0, sphereRadius = 1):
-        self.channelCursor.SetPosition(x + sphereRadius,\
-                                       y + sphereRadius,\
-                                       z + sphereRadius)
+
+    def UpdateChannelCursor(self, x_c, y_c, z_c, deleteCursor = 0, sphereRadius = 1):
+        self.channelCursor.SetPosition(x_c + sphereRadius, \
+                                       y_c + sphereRadius, \
+                                       z_c + sphereRadius)
         if deleteCursor == 0:
             self.channelCursor.GetProperty().SetColor(0, 1, 0)
         else:
@@ -61,4 +65,3 @@ class Electrode:
         tempProperty = vtk.vtkProperty()
         tempProperty.SetColor(r, g, b)
         self.channelActors.ApplyProperty(tempProperty)
-
