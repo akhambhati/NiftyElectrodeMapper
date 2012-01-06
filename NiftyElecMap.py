@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-A quick and dirty VTK based viewer for volume data.
+A tool for plotting and mapping representative electrode channels on cortical
+surface renderings.
 """
 
 
@@ -28,6 +29,7 @@ except ImportError:
             "http://www.siafoo.net/snippet/313" '
     exit(1)
 from cortex import Cortex
+from electrodes import Electrode
 
 # GUI Libraries
 import wx
@@ -48,7 +50,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         myPatient = Cortex(brain_data)
 
         #----------------------------------------------------------------------
-        # Perform Rendering
+        # Render cortical surface
         ren.AddViewProp(myPatient)
 
         # Use the trackball camera for interaction
@@ -56,69 +58,61 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         self.SetInteractorStyle(style)
 
         #----------------------------------------------------------------------
-        # Electrode Channel Representation as Spheres
-        sphereSource = vtk.vtkSphereSource()
-        sphereRadius = 1 
-        sphereSource.SetRadius(sphereRadius)
-        sphereSource.SetPhiResolution(20)
-        sphereSource.SetThetaResolution(20)
-
-        sphereMapper = vtk.vtkPolyDataMapper()
-        sphereMapper.SetInput(sphereSource.GetOutput())
-        sphereMapper.ScalarVisibilityOff()
-
-        electChanActor = vtk.vtkActor()
-        electChanActor.PickableOff()
-        electChanActor.SetMapper(sphereMapper)
-        electChanActor.GetProperty().SetColor(0, 1, 0)
-
-        ren.AddViewProp(electChanActor)
-
-        #----------------------------------------------------------------------
-        # Electrode Picking
-        electrodeCount = 0
+        # Cortical Surface Picking
         posPicker = vtk.vtkCellPicker()
         myPatient.SurfacePicker()
         posPicker.AddLocator(myPatient.cortexLocator)
+
+        # Electrode Actor Picker
         electPicker = vtk.vtkPropPicker()
-        electChanActorCollection = vtk.vtkActorCollection()
+
+        # Electrode class instance, there should be one instance for each
+        # electrode that will be mapped onto a particular cortical surface
+        # TODO: This needs to be made modular, addition of multiple electrodes
+        newElectrode = Electrode()
+
+        # Add a electrode placement cursor to the window
+        ren.AddViewProp(newElectrode.channelCursor)
 
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
-            self.GetRenderWindow().HideCursor()
+            #self.GetRenderWindow().HideCursor()
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
             posPicker.Pick(x, y, 0, ren)
             p = posPicker.GetPickPosition()
-            electChanActor.SetPosition(p[0] + sphereRadius,\
-                                       p[1] + sphereRadius,\
-                                       p[2] + sphereRadius)
-            electPicker.PickProp(x, y, ren, electChanActorCollection)
-            print type(electPicker.GetActor())
+            electPicker.PickProp(x, y, ren, newElectrode.channelActors)
             if electPicker.GetActor() is not None:
-                electChanActor.GetProperty().SetColor(1, 0, 0)
+                newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
+                    deleteCursor = 1)
             else:
-                electChanActor.GetProperty().SetColor(0, 1, 0)
+                newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
+                    deleteCursor = 0)
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
             posPicker.Pick(x, y, 0, ren)
             p = posPicker.GetPickPosition()
-            setNewElectrode(p)
+            ren.AddViewProp(\
+                    newElectrode.AddChannelRepresentationActor(\
+                    p[0], p[1], p[2]))
             wxVTKRenderWindowInteractor.Render()
-
-        def setNewElectrode(p):
-            electChanActor = vtk.vtkActor()
-            electChanActor.SetMapper(sphereMapper)
-            electChanActor.GetProperty().SetColor(0, 0, 1)
-            electChanActor.SetPosition(p[0], p[1], p[2])
-            electChanActorCollection.AddItem(electChanActor)
-            ren.AddViewProp(electChanActor)
 
         def rightClickMouse(wxVTKRenderWindowInteractor, events=""):
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
-            electPicker.PickProp(x, y, ren, electChanActorCollection)
+            electPicker.PickProp(x, y, ren, newElectrode.channelActors)
             if electPicker.GetActor() is not None:
+                newElectrode.RemoveChannelRepresentationActor(\
+                        electPicker.GetActor())
                 ren.RemoveActor(electPicker.GetActor())
+            wxVTKRenderWindowInteractor.Render()
+
+        def UpdateChannelRendering():
+            newElectrode.channelActors.InitTraversal()
+            print newElectrode.channelActors.GetNumberOfItems()
+            for numActors in range(newElectrode.channelActors.GetNumberOfItems()):
+                nextActor = newElectrode.channelActors.GetNextItem()
+                ren.RemoveActor(nextActor)
+                ren.AddViewProp(nextActor)
 
         self.AddObserver("MouseMoveEvent", MoveCursor)
         self.AddObserver("MiddleButtonPressEvent", middleClickMouse)
