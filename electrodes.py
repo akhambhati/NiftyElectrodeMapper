@@ -8,8 +8,6 @@ information
 # Visualization Libraries
 import vtk
 
-# Standard Libraries
-import math
 
 class Electrode:
     global sphereRadius
@@ -65,3 +63,34 @@ class Electrode:
         tempProperty = vtk.vtkProperty()
         tempProperty.SetColor(r, g, b)
         self.channelActors.ApplyProperty(tempProperty)
+
+    def SaveConfiguration(self, fname):
+        f = open(fname, 'wb')
+        try:
+            writer = csv.writer(f)
+            writer.writerow( ('channelID',\
+                              'x_coor',\
+                              'y_coor',\
+                              'z_coor',\
+                              'red_px',\
+                              'grn_px',\
+                              'blu_px') )
+
+            self.channelActors.InitTraversal()
+            for actorIdx in range(self.channelActors.GetNumberOfItems()):
+                nextActor = self.channelActors.GetNextActor()
+                pos = nextActor.GetPosition()
+                col = nextActor.GetProperty().GetColor()
+                writer.writerow( (actorIdx,\
+                                    pos[0],\
+                                    pos[1].\
+                                    pos[2],\
+                                    col[0],\
+                                    col[1],\
+                                    col[2]) )
+        finally:
+            f.close()
+
+    def LoadConfiguration():
+        pass
+
