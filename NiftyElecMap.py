@@ -30,6 +30,7 @@ except ImportError:
     exit(1)
 from cortex import Cortex
 from electrodes import Electrode
+import electrodes
 
 # GUI Libraries
 import wx
