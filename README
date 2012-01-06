@@ -1,13 +1,16 @@
 Nifty Electrode Mapper
 ======================
-
-The Nifty Electrode Mapper is a member of the Nifty Visualization Toolbox that
-enables manual placement and arrangement of visual electrode, or channel,
+The Nifty Electrode Mapper (NEM)is a member of the Nifty Visualization Toolbox
+that enables manual placement and arrangement of visual electrode, or channel,
 markers onto three-dimensional surface rendering of brain.
 
-Installation
+This tool was designed to ease the planning and mapping of electrode topography
+onto patient brain and specifically caters to the interests of researchers
+and clinicians.
+
+INSTALLATION
 ============
-The Nifty Visualization Toolset and all accompanying tools are developed in
+The Nifty Visualization Toolbox and all accompanying tools are developed in
 python. OS compatability includes Linux, MAC OS X, and Microsoft Windows with
 the following additional requirements:
 
@@ -22,7 +25,29 @@ the following additional requirements:
             * wxPython (Ver 2.8)
             * NiBabel (Ver 1.1)
 
-Author
+USAGE
+=====
+NEM currently contains a no-frills, simplistic work environment. Features are
+subject to change as the software proceeds in development.
+
+Currently, only NIfTI (*.nii) file-types are supported.
+
+    Initializing NEM from command-line:
+        $ python NiftyElecMap.py "path-to-nii-file.nii"
+
+NEM will start with a three-dimensional environment with specified brain volume
+rendered at the center of the window. 
+
+    Mouse Functionality:
+        - Left-click --- Rotation
+        - Right-click --- Zooming and Scaling
+        - Middle-click --- Position/Place electrode channel marker
+        - Right-click (while above a marker) --- Remove marker representation
+
+Once electrode channels have been positioned, user can simply take a screenshot
+of the rendered brain using the "Print Screen" key.
+
+AUTHOR
 ======
 Feel free to send comments and bug reports to the author. Here is the
 author's latest mail address:
@@ -31,4 +56,4 @@ author's latest mail address:
 
 
 -------------------------------------------------------------------------------
-LAST UPDATED: January 6, 2012 06:34 AM
+LAST UPDATED: January 6, 2012 07:01 AM
