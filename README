@@ -1,1 +1,34 @@
-TODO: Create documentation
+Nifty Electrode Mapper
+======================
+
+The Nifty Electrode Mapper is a member of the Nifty Visualization Toolbox that
+enables manual placement and arrangement of visual electrode, or channel,
+markers onto three-dimensional surface rendering of brain.
+
+Installation
+============
+The Nifty Visualization Toolset and all accompanying tools are developed in
+python. OS compatability includes Linux, MAC OS X, and Microsoft Windows with
+the following additional requirements:
+
+    # Python 3
+        - Unsupported
+
+    # Python 2.7
+        -  The following external packages need to be included in the default
+        python path:
+            * NumPy (Ver 2.0)
+            * SciPy (Ver 0.11)
+            * wxPython (Ver 2.8)
+            * NiBabel (Ver 1.1)
+
+Author
+======
+Feel free to send comments and bug reports to the author. Here is the
+author's latest mail address:
+
+  akhambhati@gmail.com
+
+
+-------------------------------------------------------------------------------
+LAST UPDATED: January 6, 2012 06:34 AM
