@@ -116,6 +116,14 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         self.AddObserver("MiddleButtonPressEvent", middleClickMouse)
         self.AddObserver("RightButtonPressEvent", rightClickMouse)
 
+        #----------------------------------------------------------------------
+        # wx Event Handling
+        def OnKeyPress(event):
+            # TODO: Add key handling, disable RenderWindowInteractor shortcuts
+            print "Key Pressed!!!"
+
+        parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
+
 if __name__ == '__main__':
     app = wx.App()
     frame = wx.Frame(None, -1, 'NiftyElectrodeMapping (NEM) Tool',\
