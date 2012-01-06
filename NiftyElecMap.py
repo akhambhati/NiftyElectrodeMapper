@@ -75,11 +75,14 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         ren.AddViewProp(newElectrode.channelCursor)
 
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
-            #self.GetRenderWindow().HideCursor()
+            # Function for replacing mouse cursor with channel cursor (sphere)
+            self.GetRenderWindow().HideCursor()
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
             posPicker.Pick(x, y, 0, ren)
             p = posPicker.GetPickPosition()
+            # only actors in the channelActors collection are pickable
             electPicker.PickProp(x, y, ren, newElectrode.channelActors)
+            # picker returns None when an actor not in channelActors is picked
             if electPicker.GetActor() is not None:
                 newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
                     deleteCursor = 1)
@@ -89,6 +92,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
+            # Function for adding new channel markers to the render/collection
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
             posPicker.Pick(x, y, 0, ren)
             p = posPicker.GetPickPosition()
@@ -98,6 +102,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             wxVTKRenderWindowInteractor.Render()
 
         def rightClickMouse(wxVTKRenderWindowInteractor, events=""):
+            # Function for deleting channel markers from render/collection
             x, y = wxVTKRenderWindowInteractor.GetEventPosition()
             electPicker.PickProp(x, y, ren, newElectrode.channelActors)
             if electPicker.GetActor() is not None:
@@ -106,14 +111,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
                 ren.RemoveActor(electPicker.GetActor())
             wxVTKRenderWindowInteractor.Render()
 
-        def UpdateChannelRendering():
-            newElectrode.channelActors.InitTraversal()
-            print newElectrode.channelActors.GetNumberOfItems()
-            for numActors in range(newElectrode.channelActors.GetNumberOfItems()):
-                nextActor = newElectrode.channelActors.GetNextItem()
-                ren.RemoveActor(nextActor)
-                ren.AddViewProp(nextActor)
-
+        # RenderWindowInteractor event observers
         self.AddObserver("MouseMoveEvent", MoveCursor)
         self.AddObserver("MiddleButtonPressEvent", middleClickMouse)
         self.AddObserver("RightButtonPressEvent", rightClickMouse)
