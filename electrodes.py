@@ -8,6 +8,9 @@ information
 # Visualization Libraries
 import vtk
 
+# File I/O Libraries
+import sys
+import csv
 
 class Electrode:
     global sphereRadius
@@ -83,7 +86,7 @@ class Electrode:
                 col = nextActor.GetProperty().GetColor()
                 writer.writerow( (actorIdx,\
                                     pos[0],\
-                                    pos[1].\
+                                    pos[1],\
                                     pos[2],\
                                     col[0],\
                                     col[1],\
@@ -91,6 +94,13 @@ class Electrode:
         finally:
             f.close()
 
-    def LoadConfiguration():
-        pass
+    def LoadConfiguration(self, fname):
+        f = open(fname, 'rb')
+        try:
+            reader = csv.reader(f)
+            for row in reader:
+                print row[0] + ' , ' + row[1] 
+        finally:
+            f.close()
+
 

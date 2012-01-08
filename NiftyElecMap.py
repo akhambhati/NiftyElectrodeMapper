@@ -120,7 +120,15 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # wx Event Handling
         def OnKeyPress(event):
             # TODO: Add key handling, disable RenderWindowInteractor shortcuts
-            print "Key Pressed!!!"
+            key_code = event.GetKeyCode()
+
+            # Press 'S' to save configuration
+            if key_code == ord('S') or key_code == ord('s'):
+                newElectrode.SaveConfiguration('test.csv')
+
+            # Press 'O' to open/load configuration
+            if key_code == ord('O') or key_code == ord('o'):
+                newElectrode.LoadConfiguration('test.csv')
 
         parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
 
@@ -136,6 +144,7 @@ if __name__ == '__main__':
         raw_data = NIfTI.ReadFile(brain_data_filename).get_data()
         brain_data= vtkImageImportFromArray()
         brain_data.SetArray(raw_data)
+
     except:
         print 'Invalid files!'
         exit(1)
