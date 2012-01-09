@@ -36,7 +36,7 @@ import wx
 
 
 class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
-    def __init__(self, parent, brain_data):
+    def __init__(self, parent, brain_data, elec_map_fname):
 
         #----------------------------------------------------------------------
         # Renderer and Interactor
@@ -124,7 +124,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
 
             # Press 'S' to save configuration
             if key_code == ord('S') or key_code == ord('s'):
-                newElectrode.SaveConfiguration('test.csv')
+                newElectrode.SaveConfiguration(elec_map_fname)
 
             # Press 'O' to open/load configuration
             if key_code == ord('O') or key_code == ord('o'):
@@ -133,7 +133,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
                     nextActor = newElectrode.channelActors.GetNextItem()
                     ren.RemoveActor(nextActor)
 
-                newElectrode.LoadConfiguration('test.csv')
+                newElectrode.LoadConfiguration(elec_map_fname)
 
                 newElectrode.channelActors.InitTraversal()
                 for idx in range(newElectrode.channelActors.GetNumberOfItems()):
@@ -147,19 +147,43 @@ if __name__ == '__main__':
     frame = wx.Frame(None, -1, 'NiftyElectrodeMapping (NEM) Tool',\
             wx.DefaultPosition, wx.Size(600, 600))
 
-    # Load the specified NIfTI file
+    # Load the specified brain NIfTI file
     try:
         brain_data_filename = sys.argv[1]
         print brain_data_filename
         raw_data = NIfTI.ReadFile(brain_data_filename).get_data()
-        brain_data= vtkImageImportFromArray()
+        brain_data = vtkImageImportFromArray()
         brain_data.SetArray(raw_data)
-
     except:
-        print 'Invalid files!'
+        print 'Could not import brain NIfTI!'
         exit(1)
 
-    canvas = ElectrodeMappingInteractor(frame, brain_data)
+    # Get electrode mapping filename
+    try:
+        electrode_map_fname = sys.argv[2]
+    except:
+        electrode_map_fname = 'backup.csv'
+        print 'No mapping configuration file supplied, saving to backup.csv'
+
+    # Load the specified electrode-CT NIfTI file
+    try:
+        electrode_data_filename = sys.argv[3]
+        print electrode_data_filename
+        raw_data = NIfTI.ReadFile(electrode_data_filename).get_data()
+        electrode_data = vtkImageImportFromArray()
+        electrode_data.SetArray(electrode_data)
+    except:
+        print 'Could not import electrode NIfTI!'
+
+    try:
+        canvas = ElectrodeMappingInteractor(frame,\
+                                            brain_data,\
+                                            electrode_map_fname,\
+                                            electrode_data)
+    except:
+        canvas = ElectrodeMappingInteractor(frame,\
+                                            brain_data,\
+                                            electrode_map_fname)
 
     frame.Show()
     app.MainLoop()
