@@ -45,15 +45,18 @@ class Electrode:
         as a placement cursor
         """
 
+        # Create the source, which creates internal array representation
         sphereSource = vtk.vtkSphereSource()
         sphereSource.SetRadius(sphereRadius)
         sphereSource.SetPhiResolution(20)
         sphereSource.SetThetaResolution(20)
 
+        # map the source to polygonal data
         sphereMapper = vtk.vtkPolyDataMapper()
         sphereMapper.SetInput(sphereSource.GetOutput())
         sphereMapper.ScalarVisibilityOff()
 
+        # take the polygonal data and create a visual actor for it
         sphereActor = vtk.vtkActor()
         sphereActor.SetMapper(sphereMapper)
 
@@ -82,7 +85,7 @@ class Electrode:
                                             grn_px = 0,\
                                             blu_px = 1):
         """
-        Add a new channel to the electrode configuration with spatial position,
+        Add a new channel to the electrode configration with spatial position,
         size, and color
         """
 
@@ -93,6 +96,7 @@ class Electrode:
                                     y_coor + sphereRadius,\
                                     z_coor + sphereRadius)
 
+        # Add actors to running collection of actors in the scene
         self.channelActors.AddItem(newChannelActor)
         return newChannelActor
 
@@ -118,13 +122,15 @@ class Electrode:
 
         # Initialize the channel info list that will contain dictionaries
         self.channelInfo = []
+
         # Add an entry to the channelProperties list for keeping track of chans
         self.channelActors.InitTraversal()
-
         for idx in range(self.channelActors.GetNumberOfItems()):
             nextActor = self.channelActors.GetNextActor()
             pos = nextActor.GetPosition()
             col = nextActor.GetProperty().GetColor()
+
+            # Add a new dictionary to the channelInfo list
             self.channelInfo.append({})
             validActor = True
             for prop in self.channelProperties:
@@ -144,6 +150,7 @@ class Electrode:
                     self.channelInfo[-1][prop] = col[2]
                 else:
                     validActor = False
+
             # Failed parses are popped from the list of dictionaries
             if validActor is False:
                 self.channelInfo.pop()
@@ -167,7 +174,6 @@ class Electrode:
                     float(chan[self.channelProperties[4]]),\
                     float(chan[self.channelProperties[5]]),\
                     float(chan[self.channelProperties[6]]))
-            self.channelActors.AddItem(nextLoadActor)
 
     def SaveConfiguration(self, fname):
         f = open(fname, 'wb')
