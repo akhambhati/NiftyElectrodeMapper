@@ -128,7 +128,17 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
 
             # Press 'O' to open/load configuration
             if key_code == ord('O') or key_code == ord('o'):
+                newElectrode.channelActors.InitTraversal()
+                for idx in range(newElectrode.channelActors.GetNumberOfItems()):
+                    nextActor = newElectrode.channelActors.GetNextItem()
+                    ren.RemoveActor(nextActor)
+
                 newElectrode.LoadConfiguration('test.csv')
+
+                newElectrode.channelActors.InitTraversal()
+                for idx in range(newElectrode.channelActors.GetNumberOfItems()):
+                    nextActor = newElectrode.channelActors.GetNextItem()
+                    ren.AddViewProp(nextActor)
 
         parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
 
