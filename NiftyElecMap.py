@@ -9,9 +9,10 @@ surface renderings.
 import math
 import numpy
 
-# File Type Handling
+# I/O Handling
 from Volume.Formats import NIfTI
 import sys
+import curses
 
 #Visualization Libraries
 from vtk import *
@@ -29,14 +30,15 @@ except ImportError:
             "http://www.siafoo.net/snippet/313" '
     exit(1)
 from cortex import Cortex
-from electrodes import Electrode
+from electrodes import MappedElectrode
+from electrodes import CTElectrode
 
 # GUI Libraries
 import wx
 
 
 class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
-    def __init__(self, parent, brain_data, elec_map_fname):
+    def __init__(self, parent, brain_data, elec_map_fname, elec_ct_data=None):
 
         #----------------------------------------------------------------------
         # Renderer and Interactor
@@ -48,10 +50,16 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         #----------------------------------------------------------------------
         # Setup Surface Rendering
         myPatient = Cortex(brain_data)
-
-        #----------------------------------------------------------------------
-        # Render cortical surface
         ren.AddViewProp(myPatient)
+
+        #---------------------------------------------------------------------
+        # Check and render segmented electrode CT surface
+        print elec_ct_data
+        if elec_ct_data is not None:
+            myElectrodeCT = CTElectrode(elec_ct_data)
+            ren.AddViewProp(myElectrodeCT)
+        else:
+            print "No electrode CT data specified"
 
         # Use the trackball camera for interaction
         style = vtk.vtkInteractorStyleTrackballCamera()
@@ -69,7 +77,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Electrode class instance, there should be one instance for each
         # electrode that will be mapped onto a particular cortical surface
         # TODO: This needs to be made modular, addition of multiple electrodes
-        newElectrode = Electrode()
+        newElectrode = MappedElectrode()
 
         # Add a electrode placement cursor to the window
         ren.AddViewProp(newElectrode.channelCursor)
@@ -140,6 +148,14 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
                     nextActor = newElectrode.channelActors.GetNextItem()
                     ren.AddViewProp(nextActor)
 
+            # Press 'UP ARROW' to increase opacity of cortex surface
+            if key_code == wx.WXK_UP:
+                myPatient.SetOpacityUp()
+
+            # Press 'DOWN ARROW' to decrease opacity of cortex surface
+            if key_code == wx.WXK_DOWN:
+                myPatient.SetOpacityDown()
+
         parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
 
 if __name__ == '__main__':
@@ -170,20 +186,16 @@ if __name__ == '__main__':
         electrode_data_filename = sys.argv[3]
         print electrode_data_filename
         raw_data = NIfTI.ReadFile(electrode_data_filename).get_data()
-        electrode_data = vtkImageImportFromArray()
-        electrode_data.SetArray(electrode_data)
+        elect_data = vtkImageImportFromArray()
+        elect_data.SetArray(raw_data)
     except:
+        elect_data = None
         print 'Could not import electrode NIfTI!'
 
-    try:
-        canvas = ElectrodeMappingInteractor(frame,\
+    canvas = ElectrodeMappingInteractor(frame,\
                                             brain_data,\
                                             electrode_map_fname,\
-                                            electrode_data)
-    except:
-        canvas = ElectrodeMappingInteractor(frame,\
-                                            brain_data,\
-                                            electrode_map_fname)
+                                            elect_data)
 
     frame.Show()
     app.MainLoop()

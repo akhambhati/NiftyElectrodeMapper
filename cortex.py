@@ -34,6 +34,7 @@ class Cortex(vtk.vtkLODActor):
         # Color the cortex (RGB)
         self.cortexProperty = vtk.vtkProperty()
         self.cortexProperty.SetColor(1, 1, 1)
+        self.cortexProperty.SetOpacity(1);
 
         # Set the actor to adhere to mapped surface and inherit properties
         self.SetMapper(self.cortexMapper)
@@ -45,6 +46,19 @@ class Cortex(vtk.vtkLODActor):
         self.cortexLocator.SetDataSet(self.cortexExtractor.GetOutput())
         self.cortexLocator.LazyEvaluationOn()
 
+    def SetOpacityUp(self):
+        opc = self.GetProperty().GetOpacity()
+        print opc
+        if (opc + 0.1) <= 1.0:
+            self.GetProperty().SetOpacity(opc + 0.1)
+            self.cortexExtractor.Update()
+
+    def SetOpacityDown(self):
+        opc = self.GetProperty().GetOpacity()
+        print opc
+        if (opc - 0.1) >= 0.0:
+            self.GetProperty().SetOpacity(opc - 0.1)
+            self.cortexExtractor.Update()
 
 if __name__ == '__main__':
     import wx, sys

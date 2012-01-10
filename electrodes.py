@@ -12,32 +12,67 @@ import vtk
 import sys
 import csv
 
-class Electrode:
+# Scientific Libraries
+import numpy as np
+
+
+class CTElectrode(vtk.vtkLODActor):
+    """
+    Actor class for rendering CT-based electrodes
+    """
+    def __init__(self, electrode_data):
+        """
+        Setup Surface Rendering
+        """
+
+        # Apply a discrete marching cubes algorithm to extract segmented
+        # surface contours with incremental values
+        self.electrodeExtractor = vtk.vtkDiscreteMarchingCubes()
+        self.electrodeExtractor.SetInput(electrode_data.GetOutput())
+        self.electrodeExtractor.GenerateValues(1, 0, 42)
+        """        self.electrodeExtractor.GenerateValues(1,\
+                np.min(electrode_data.GetArray()),\
+                np.max(electrode_data.GetArray()))
+        """
+        self.electrodeMapper = vtk.vtkPolyDataMapper()
+        self.electrodeMapper.SetInputConnection(\
+                self.electrodeExtractor.GetOutputPort())
+        self.electrodeMapper.ScalarVisibilityOff()
+
+        self.electrodeProperty = vtk.vtkProperty()
+        self.electrodeProperty.SetColor(1.0, 0.5, 0.0)
+
+        self.SetMapper(self.electrodeMapper)
+        self.SetProperty(self.electrodeProperty)
+        self.electrodeExtractor.Update()
+
+class MappedElectrode:
+    """
+    Class for mapping and rendering mapped electrode
+    """
     global sphereRadius
     sphereRadius = 1
+
     def __init__(self):
         """
         Set a particular cursor for mapping channels for this electrode, and
         initialize actor collections and actor property lists
         """
-
         # Set the electrode placement cursor
         self.channelCursor = self.__CreateChannelRepresentationActor()
         self.channelCursor.GetProperty().SetColor(0, 1, 0)
         self.channelCursor.PickableOff()
-
         # Instantiate an collection for positioned channel actors
         self.channelActors = vtk.vtkActorCollection()
-
         # Instantiate a dictionary list to hold information mapped channel info
         self.channelInfo = []
         self.channelProperties = ['channelID',\
-                                    'x_coor',\
-                                    'y_coor',\
-                                    'z_coor',\
-                                    'red_px',\
-                                    'grn_px',\
-                                    'blu_px']
+                                  'x_coor',\
+                                  'y_coor',\
+                                  'z_coor',\
+                                  'red_px',\
+                                  'grn_px',\
+                                  'blu_px']
 
     def __CreateChannelRepresentationActor(self):
         """
@@ -62,7 +97,7 @@ class Electrode:
 
         return sphereActor
 
-    def UpdateChannelCursor(self, x_c, y_c, z_c, deleteCursor = 0):
+    def UpdateChannelCursor(self, x_c, y_c, z_c, deleteCursor=0):
         """
         Updates the position of the placement cursor as the mouse moves within
         the render window
@@ -81,9 +116,9 @@ class Electrode:
     def AddChannelRepresentationActor(self, x_coor,\
                                             y_coor,\
                                             z_coor,\
-                                            red_px = 0,\
-                                            grn_px = 0,\
-                                            blu_px = 1):
+                                            red_px=0.0,\
+                                            grn_px=0.0,\
+                                            blu_px=1.0):
         """
         Add a new channel to the electrode configration with spatial position,
         size, and color
@@ -186,7 +221,7 @@ class Electrode:
                 for i, j in enumerate(self.channelProperties):
                     writeList.append(chan[self.channelProperties[i]])
                 writer.writerow(writeList)
-            print "Configuration saved to "  + fname
+            print "Configuration saved to " + fname
         finally:
             f.close()
 
