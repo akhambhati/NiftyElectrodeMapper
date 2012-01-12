@@ -16,6 +16,113 @@ import csv
 import numpy as np
 
 
+class ElectrodeGrid2:
+    pass
+
+
+class ElectrodeGrid(vtk.vtkAssembly):
+    """
+    Actor class for rendering an electrode plane with specified channel dims.
+    All electrode property units are in mm.
+    """
+    def __init__(self, channelDims=(8, 8),\
+                       imagingDims=(0.9375, 0.9375, 1.5),\
+                       channelDiam=4.0,\
+                       channelSpacing=10,\
+                       electrodeHeight=0.7,\
+                       electrodeLength=90,\
+                       electrodeWidth=80):
+
+        # Set dimensional properties for the electrode instance
+        self.imagingDims = imagingDims
+        self.channelDims = channelDims
+        self.channelDiam = channelDiam
+        self.channelSpacing = channelSpacing
+        self.electrodeHeight = electrodeHeight
+        self.electrodeLength = electrodeLength
+        self.electrodeWidth = electrodeWidth
+
+        chanCount = 1
+        self.channelActors = vtk.vtkActorCollection()
+        for widthPos in range(self.channelDims[1]):
+            for lengthPos in range(self.channelDims[0]):
+                newChan = self.__channelActor()
+                newChan.SetPosition(\
+                        widthPos * self.channelSpacing / self.imagingDims[0],\
+                        0,\
+                        lengthPos * self.channelSpacing / self.imagingDims[0]\
+                        )
+                newChan.PickableOff()
+                self.channelActors.AddItem(newChan)
+                self.AddPart(newChan)
+                chanCount = chanCount + 1
+        self.PickableOff()
+
+    def __channelActor(self):
+        channelCyl = vtk.vtkCylinderSource()
+        channelCyl.SetRadius(self.channelDiam / self.imagingDims[0])
+        channelCyl.SetHeight(self.electrodeHeight / self.imagingDims[2])
+        channelCyl.SetResolution(30)
+
+        channelCylMapper = vtk.vtkPolyDataMapper()
+        channelCylMapper.SetInputConnection(channelCyl.GetOutputPort())
+
+        channelCylActor = vtk.vtkActor()
+        channelCylActor.SetMapper(channelCylMapper)
+        channelCylActor.GetProperty().SetColor(1.0, 1.0, 0)
+
+        return channelCylActor
+
+    def __electrodeBorders(self):
+        cornerTopLeft = (0,\
+                         self.electrodeLength / self.imagingDims[0],\
+                         0)
+        cornerTopRight = (self.electrodeWidth / self.imagingDims[0],\
+                          self.electrodeLength / self.imagingDims[0],\
+                          0)
+        cornerBotRight = (self.electrodeWidth / self.imagingDims[0],\
+                          0,\
+                          0)
+        cornerBotLeft = (0, 0, 0)
+
+        borderPoints = vtk.vtkPoints()
+        borderPoints.InsertNextPoint(cornerBotLeft)
+        borderPoints.InsertNextPoint(cornerTopLeft)
+        borderPoints.InsertNextPoint(cornerTopRight)
+        borderPoints.InsertNextPoint(cornerBotRight)
+        borderPoints.InsertNextPoint(cornerBotLeft)
+
+        borderLines = vtk.vtkPolyLine()
+        borderLines.GetPointIds().SetNumberOfIds(5)
+        borderLines.GetPointIds().SetId(0, 0)
+        borderLines.GetPointIds().SetId(1, 1)
+        borderLines.GetPointIds().SetId(2, 2)
+        borderLines.GetPointIds().SetId(3, 3)
+        borderLines.GetPointIds().SetId(4, 4)
+
+        cells = vtk.vtkCellArray()
+        cells.InsertNextCell(borderLines)
+
+        borderPolyData = vtk.vtkPolyData()
+        borderPolyData.SetPoints(borderPoints)
+        borderPolyData.SetLines(cells)
+
+        borderMapper = vtk.vtkPolyDataMapper()
+        borderMapper.SetInput(borderPolyData)
+
+        borderActor = vtk.vtkActor()
+        borderActor.SetMapper(borderMapper)
+        borderActor.GetProperty().SetColor(1.0, 0.0, 0.5)
+
+        return borderActor
+
+    def UpdateChannelCursor(self, x_c, y_c, z_c, deleteCursor=0):
+        """
+        Updates the position of the placement cursor as the mouse moves within
+        the render window
+        """
+        self.SetPosition(x_c, y_c, z_c)
+
 class CTElectrode(vtk.vtkLODActor):
     """
     Actor class for rendering CT-based electrodes
@@ -55,7 +162,7 @@ class MappedElectrode:
 
     def __init__(self):
         """
-        Set a particular cursor for mapping channels for this electrode, and
+        Set a particular cursor formapping channels for this electrode, and
         initialize actor collections and actor property lists
         """
         # Set the electrode placement cursor

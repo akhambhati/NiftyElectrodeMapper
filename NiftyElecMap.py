@@ -32,6 +32,7 @@ except ImportError:
 from cortex import Cortex
 from electrodes import MappedElectrode
 from electrodes import CTElectrode
+from electrodes import ElectrodeGrid
 
 # GUI Libraries
 import wx
@@ -51,6 +52,11 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Setup Surface Rendering
         myPatient = Cortex(brain_data)
         ren.AddViewProp(myPatient)
+
+        #----------------------------------------------------------------------
+        # Setup Electrode Grid Rendering
+        myGrid = ElectrodeGrid()
+        ren.AddViewProp(myGrid)
 
         #---------------------------------------------------------------------
         # Check and render segmented electrode CT surface
@@ -97,6 +103,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             else:
                 newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
                     deleteCursor = 0)
+            myGrid.UpdateChannelCursor(p[0], p[1], p[2])
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
@@ -167,9 +174,11 @@ if __name__ == '__main__':
     try:
         brain_data_filename = sys.argv[1]
         print brain_data_filename
-        raw_data = NIfTI.ReadFile(brain_data_filename).get_data()
+        raw_data = NIfTI.ReadFile(brain_data_filename)
         brain_data = vtkImageImportFromArray()
-        brain_data.SetArray(raw_data)
+        brain_data.SetArray(raw_data.get_data())
+
+        print raw_data
     except:
         print 'Could not import brain NIfTI!'
         exit(1)
@@ -185,9 +194,11 @@ if __name__ == '__main__':
     try:
         electrode_data_filename = sys.argv[3]
         print electrode_data_filename
-        raw_data = NIfTI.ReadFile(electrode_data_filename).get_data()
+        raw_data = NIfTI.ReadFile(electrode_data_filename)
         elect_data = vtkImageImportFromArray()
-        elect_data.SetArray(raw_data)
+        elect_data.SetArray(raw_data.get_data())
+
+        print raw_data
     except:
         elect_data = None
         print 'Could not import electrode NIfTI!'
