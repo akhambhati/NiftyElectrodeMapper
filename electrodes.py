@@ -123,6 +123,16 @@ class ElectrodeGrid(vtk.vtkAssembly):
         """
         self.SetPosition(x_c, y_c, z_c)
 
+    def Pitch(self):
+        self.RotateX(5)
+
+    def Roll(self):
+        self.RotateY(5)
+
+    def Yaw(self):
+        self.RotateZ(5)
+
+
 class CTElectrode(vtk.vtkLODActor):
     """
     Actor class for rendering CT-based electrodes

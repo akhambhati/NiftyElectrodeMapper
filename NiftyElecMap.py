@@ -88,6 +88,15 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Add a electrode placement cursor to the window
         ren.AddViewProp(newElectrode.channelCursor)
 
+        grid = vtk.vtkPolyData()
+        points = vtk.vtkPoints()
+        points.InsertPoint(0, 0.0, 0.0, 0.0)
+        points.InsertPoint(1, 0.0, 30.0, 0.0)
+        points.InsertPoint(2, 30.0, 0.0, 0.0)
+        points.InsertPoint(3, 30.0, 30.0, 0.0)
+        grid.SetPoints(points)
+
+
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
             # Function for replacing mouse cursor with channel cursor (sphere)
             self.GetRenderWindow().HideCursor()
@@ -162,6 +171,19 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             # Press 'DOWN ARROW' to decrease opacity of cortex surface
             if key_code == wx.WXK_DOWN:
                 myPatient.SetOpacityDown()
+
+
+            if key_code == ord('Z') or key_code == ord('z'):
+                myGrid.Pitch()
+                ren.GetRenderWindow().Render()
+
+            if key_code == ord('X') or key_code == ord('x'):
+                myGrid.Yaw()
+                ren.GetRenderWindow().Render()
+
+            if key_code == ord('C') or key_code == ord('c'):
+                myGrid.Roll()
+                ren.GetRenderWindow().Render()
 
         parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
 
