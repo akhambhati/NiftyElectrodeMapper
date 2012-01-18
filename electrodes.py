@@ -138,10 +138,9 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         icp = vtk.vtkIterativeClosestPointTransform()
         icp.SetSource(currentChannelPolyData)
         icp.SetTarget(brain_surface.GetOutput())
-        icp.GetLandmarkTransform().SetModeToAffine()
+        icp.GetLandmarkTransform().SetModeToRigidBody()
         icp.SetMaximumNumberOfIterations(100)
         icp.StartByMatchingCentroidsOn()
-        icp.SetMaximumMeanDistance(0.1)
         icp.Modified()
         icp.Update()
 
