@@ -16,8 +16,153 @@ import csv
 import numpy as np
 
 
-class ElectrodeGrid2:
-    pass
+class ElectrodeGrid2(vtk.vtkAssembly):
+    def __init__(self, channelDims=(6, 6),\
+                       imagingDims=(0.9375, 0.9375, 1.5),\
+                       channelDiam=4.0,\
+                       channelSpacing=10,\
+                       channelHeight=2.3,\
+                       electrodeHeight=0.7,\
+                       electrodeLength=90,\
+                       electrodeWidth=80):
+
+        # Set dimensional properties for the electrode instance
+        self.imagingDims = imagingDims
+        self.channelDims = channelDims
+        self.channelDiam = channelDiam
+        self.channelSpacing = channelSpacing
+        self.channelHeight = channelHeight
+        self.electrodeHeight = electrodeHeight
+        self.electrodeLength = electrodeLength
+        self.electrodeWidth = electrodeWidth
+
+        chanID = 0
+        for widthPos in range(self.channelDims[1]):
+            for lengthPos in range(self.channelDims[0]):
+                x = widthPos * self.channelSpacing / self.imagingDims[0]
+                z = lengthPos * self.channelSpacing / self.imagingDims[0]
+                y = 0.0
+                newChan = self.__channelActor(x, y, z)
+                newChan.PickableOff()
+                self.AddPart(newChan)
+                chanID = chanID + 1
+
+
+    def __CreateGridActor(self):
+        self.electrodePD = vtk.vtkPolyData()
+        self.electrodePD.SetPoints(self.channelPoints)
+
+        electrodeMapper = vtk.vtkPolyDataMapper()
+        electrodeMapper.SetInput(self.electrodePD)
+
+        self.SetMapper(electrodeMapper)
+        self.GetProperty().SetColor(1, 1, 0)
+
+    def __channelActor(self, pos_x, pos_y, pos_z):
+        channelCyl = vtk.vtkCylinderSource()
+        channelCyl.SetRadius(self.channelDiam / self.imagingDims[0])
+        channelCyl.SetHeight(self.channelHeight / self.imagingDims[2])
+        channelCyl.SetResolution(30)
+
+        channelCylMapper = vtk.vtkPolyDataMapper()
+        channelCylMapper.SetInputConnection(channelCyl.GetOutputPort())
+
+        channelCylActor = vtk.vtkActor()
+        channelCylActor.SetMapper(channelCylMapper)
+        channelCylActor.GetProperty().SetColor(1.0, 1.0, 0)
+        channelCylActor.SetPosition(pos_x, pos_y, pos_z)
+
+        return channelCylActor
+
+
+    def UpdateChannelCursor(self, x_c, y_c, z_c, deleteCursor=0):
+        """
+        Updates the position of the placement cursor as the mouse moves within
+        the render window
+        """
+        self.SetPosition(x_c, y_c, z_c)
+
+    def Pitch(self):
+        self.RotateX(5)
+
+    def Roll(self):
+        self.RotateY(5)
+
+    def Yaw(self):
+        self.RotateZ(5)
+
+    def RegisterGrid(self, brain_surface):
+
+        # Create a vtkPoints containing channel center locations
+        self.channelPoints = vtk.vtkPoints()
+        self.channelPolyData = vtk.vtkPolyData()
+
+        chanID = 0
+        for widthPos in range(self.channelDims[1]):
+            for lengthPos in range(self.channelDims[0]):
+                x = widthPos * self.channelSpacing / self.imagingDims[0]
+                z = lengthPos * self.channelSpacing / self.imagingDims[0]
+                y = 0.0
+                self.channelPoints.InsertPoint(chanID, x, y, z)
+                chanID = chanID + 1
+        self.channelPolyData.SetPoints(self.channelPoints)
+
+        transMat = self.GetMatrix()
+
+        allAssemblyTransform = vtk.vtkTransform()
+        allAssemblyTransform.SetMatrix(transMat)
+        allAssemblyTransform.Update()
+
+        allAssemblyTransFilt = vtk.vtkTransformPolyDataFilter()
+        allAssemblyTransFilt.SetInput(self.channelPolyData)
+        allAssemblyTransFilt.SetTransform(allAssemblyTransform)
+        allAssemblyTransFilt.Update()
+
+        currentChannelPolyData = allAssemblyTransFilt.GetOutput()
+
+        #### MAKE SURE TRANSFORMATION ACTUALLY WORKS.
+        """
+        pd = allAssemblyTransFilt.GetOutput()
+
+        transformAssembly = vtk.vtkAssembly()
+        for chanIdx in range(pd.GetNumberOfPoints()):
+            point = [0, 0, 0]
+            pd.GetPoint(chanIdx, point)
+            regChan = self.__channelActor(point[0], point[1], point[2])
+            transformAssembly.AddPart(regChan)
+
+        return transformAssembly
+        """
+        ####
+
+        icp = vtk.vtkIterativeClosestPointTransform()
+        icp.SetSource(currentChannelPolyData)
+        icp.SetTarget(brain_surface.GetOutput())
+        icp.GetLandmarkTransform().SetModeToAffine()
+        icp.SetMaximumNumberOfIterations(100)
+        icp.StartByMatchingCentroidsOn()
+        icp.SetMaximumMeanDistance(0.1)
+        icp.Modified()
+        icp.Update()
+
+        print icp.GetMatrix()
+
+        icpTransformFilter = vtk.vtkTransformPolyDataFilter()
+        icpTransformFilter.SetInput(self.channelPolyData)
+        icpTransformFilter.SetTransform(icp)
+        icpTransformFilter.Update()
+
+        transformedSource = icpTransformFilter.GetOutput()
+        channelCollectionTransformed = vtk.vtkActorCollection()
+        channelAssemblyTransformed = vtk.vtkAssembly()
+        for chanIdx in range(transformedSource.GetNumberOfPoints()):
+            point = [0, 0, 0]
+            transformedSource.GetPoint(chanIdx, point)
+            regChan = self.__channelActor(point[0], point[1], point[2])
+            channelCollectionTransformed.AddItem(regChan)
+            channelAssemblyTransformed.AddPart(regChan)
+
+        return channelAssemblyTransformed
 
 
 class ElectrodeGrid(vtk.vtkAssembly):

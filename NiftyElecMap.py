@@ -33,6 +33,7 @@ from cortex import Cortex
 from electrodes import MappedElectrode
 from electrodes import CTElectrode
 from electrodes import ElectrodeGrid
+from electrodes import ElectrodeGrid2
 
 # GUI Libraries
 import wx
@@ -55,7 +56,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
 
         #----------------------------------------------------------------------
         # Setup Electrode Grid Rendering
-        myGrid = ElectrodeGrid()
+        myGrid = ElectrodeGrid2()
         ren.AddViewProp(myGrid)
 
         #---------------------------------------------------------------------
@@ -63,12 +64,12 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         print elec_ct_data
         if elec_ct_data is not None:
             myElectrodeCT = CTElectrode(elec_ct_data)
-            ren.AddViewProp(myElectrodeCT)
+            #ren.AddViewProp(myElectrodeCT)
         else:
             print "No electrode CT data specified"
 
         # Use the trackball camera for interaction
-        style = vtk.vtkInteractorStyleTrackballCamera()
+        style = vtk.vtkInteractorStyleTrackballCamera()
         self.SetInteractorStyle(style)
 
         #----------------------------------------------------------------------
@@ -88,13 +89,6 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Add a electrode placement cursor to the window
         ren.AddViewProp(newElectrode.channelCursor)
 
-        grid = vtk.vtkPolyData()
-        points = vtk.vtkPoints()
-        points.InsertPoint(0, 0.0, 0.0, 0.0)
-        points.InsertPoint(1, 0.0, 30.0, 0.0)
-        points.InsertPoint(2, 30.0, 0.0, 0.0)
-        points.InsertPoint(3, 30.0, 30.0, 0.0)
-        grid.SetPoints(points)
 
 
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
@@ -123,6 +117,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             ren.AddViewProp(\
                     newElectrode.AddChannelRepresentationActor(\
                     p[0], p[1], p[2]))
+            ren.AddViewProp(myGrid.RegisterGrid(myPatient.cortexExtractor))
             wxVTKRenderWindowInteractor.Render()
 
         def rightClickMouse(wxVTKRenderWindowInteractor, events=""):
