@@ -90,7 +90,6 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         ren.AddViewProp(newElectrode.channelCursor)
 
 
-
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
             # Function for replacing mouse cursor with channel cursor (sphere)
             self.GetRenderWindow().HideCursor()
@@ -107,6 +106,11 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
                 newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
                     deleteCursor = 0)
             myGrid.UpdateChannelCursor(p[0], p[1], p[2])
+            try:
+                ren.RemoveActor(myGrid.chanAssemblyTransformed)
+            finally:
+                myGrid.RegisterGrid(myPatient.cortexExtractor)
+                ren.AddViewProp(myGrid.chanAssemblyTransformed)
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
@@ -117,7 +121,9 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             ren.AddViewProp(\
                     newElectrode.AddChannelRepresentationActor(\
                     p[0], p[1], p[2]))
-            ren.AddViewProp(myGrid.RegisterGrid(myPatient.cortexExtractor))
+            myGrid.RegisterGrid(myPatient.cortexExtractor)
+            newGrid = myGrid.chanAssemblyTransformed
+            ren.AddViewProp(newGrid)
             wxVTKRenderWindowInteractor.Render()
 
         def rightClickMouse(wxVTKRenderWindowInteractor, events=""):

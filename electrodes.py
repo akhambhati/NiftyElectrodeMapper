@@ -80,7 +80,7 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         Updates the position of the placement cursor as the mouse moves within
         the render window
         """
-        self.SetPosition(x_c, y_c, z_c)
+        self.SetPosition(x_c + 5, y_c + 5, z_c + 5)
 
     def Pitch(self):
         self.RotateX(5)
@@ -118,7 +118,6 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         allAssemblyTransFilt.SetTransform(allAssemblyTransform)
         allAssemblyTransFilt.Update()
 
-        currentChannelPolyData = allAssemblyTransFilt.GetOutput()
 
         #### MAKE SURE TRANSFORMATION ACTUALLY WORKS.
         """
@@ -135,34 +134,24 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         """
         ####
 
-        icp = vtk.vtkIterativeClosestPointTransform()
-        icp.SetSource(currentChannelPolyData)
-        icp.SetTarget(brain_surface.GetOutput())
-        icp.GetLandmarkTransform().SetModeToAffine()
-        icp.SetMaximumNumberOfIterations(100)
-        icp.StartByMatchingCentroidsOn()
-        icp.SetMaximumMeanDistance(0.1)
-        icp.Modified()
-        icp.Update()
+        self.chanAssemblyTransformed = vtk.vtkAssembly()
+        currentChannelPolyData = allAssemblyTransFilt.GetOutput()
 
-        print icp.GetMatrix()
+        corticalSurfaceLocator = vtk.vtkPointLocator()
+        corticalSurfaceLocator.SetDataSet(brain_surface.GetOutput())
+        corticalSurfaceLocator.BuildLocator()
 
-        icpTransformFilter = vtk.vtkTransformPolyDataFilter()
-        icpTransformFilter.SetInput(self.channelPolyData)
-        icpTransformFilter.SetTransform(icp)
-        icpTransformFilter.Update()
+        for chanIdx in range(currentChannelPolyData.GetNumberOfPoints()):
+            point0 = [0, 0, 0]
+            point1 = [0, 0, 0]
+            currentChannelPolyData.GetPoint(chanIdx, point0)
+            cortChanId = corticalSurfaceLocator.FindClosestPoint(point0)
+            brain_surface.GetOutput().GetPoint(cortChanId, point1)
+            #print point0, point1
 
-        transformedSource = icpTransformFilter.GetOutput()
-        channelCollectionTransformed = vtk.vtkActorCollection()
-        channelAssemblyTransformed = vtk.vtkAssembly()
-        for chanIdx in range(transformedSource.GetNumberOfPoints()):
-            point = [0, 0, 0]
-            transformedSource.GetPoint(chanIdx, point)
-            regChan = self.__channelActor(point[0], point[1], point[2])
-            channelCollectionTransformed.AddItem(regChan)
-            channelAssemblyTransformed.AddPart(regChan)
+            newChan = self.__channelActor(point1[0], point1[1], point1[2])
+            self.chanAssemblyTransformed.AddPart(newChan)
 
-        return channelAssemblyTransformed
 
 
 class ElectrodeGrid(vtk.vtkAssembly):
