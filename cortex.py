@@ -8,23 +8,22 @@ import vtk
 
 
 class Cortex(vtk.vtkLODActor):
-    def __init__(self, brain_data, isoval=30):
+    def __init__(self, brain_data, isoval=34):
         # Setup Surface Rendering
+
+        # Gaussian smoothing of surface rendering for aesthetics
+        # Adds significant delay to rendering
+        self.cortexSmoother = vtk.vtkImageGaussianSmooth()
+        self.cortexSmoother.SetDimensionality(3)
+        self.cortexSmoother.SetRadiusFactors(0.5, 0.5, 0.5)
+        self.cortexSmoother.SetInput(brain_data.GetOutput())
 
         # Apply a marching cubes algorithm to extract surface contour with
         # isovalue of 30 (can change to adjust proper rendering of tissue
         self.cortexExtractor = vtk.vtkMarchingCubes()
-        self.cortexExtractor.SetInput(brain_data.GetOutput())
+        self.cortexExtractor.SetInput(self.cortexSmoother.GetOutput())
         self.cortexExtractor.SetValue(0, isoval)
         self.cortexExtractor.ComputeNormalsOn()
-
-        # Laplacian smoothing of surface rendering for aesthetics
-        # Adds significant delay to rendering
-        """
-        self.cortexSmoother = vtk.vtkSmoothPolyDataFilter()
-        self.cortexSmoother.SetInput(self.cortexExtractor.GetOutput())
-        self.cortexSmoother.SetNumberOfIterations(1)
-        """
 
         # Map/Paint the polydata associated with the surface rendering
         self.cortexMapper = vtk.vtkPolyDataMapper()
