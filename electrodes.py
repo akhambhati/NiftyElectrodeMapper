@@ -23,8 +23,8 @@ class ElectrodeGrid2(vtk.vtkAssembly):
                        channelSpacing=10,\
                        channelHeight=2.3,\
                        electrodeHeight=0.7,\
-                       electrodeLength=90,\
-                       electrodeWidth=80):
+                       electrodeLength=60,\
+                       electrodeWidth=60):
 
         # Set dimensional properties for the electrode instance
         self.imagingDims = imagingDims
@@ -36,27 +36,42 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         self.electrodeLength = electrodeLength
         self.electrodeWidth = electrodeWidth
 
+        channelPoints = vtk.vtkPoints()
+        self.channelPolyData = vtk.vtkPolyData()
+
         chanID = 0
         for widthPos in range(self.channelDims[1]):
             for lengthPos in range(self.channelDims[0]):
                 x = widthPos * self.channelSpacing / self.imagingDims[0]
                 z = lengthPos * self.channelSpacing / self.imagingDims[0]
                 y = 0.0
+
                 newChan = self.__channelActor(x, y, z)
                 newChan.PickableOff()
                 self.AddPart(newChan)
+
+                channelPoints.InsertPoint(chanID, x, y, z)
+
                 chanID = chanID + 1
 
+        self.channelPolyData.SetPoints(channelPoints)
 
     def __CreateGridActor(self):
-        self.electrodePD = vtk.vtkPolyData()
-        self.electrodePD.SetPoints(self.channelPoints)
+        self.electrodePlane = vtk.vtkPlaneSource()
+        self.electrodePlane.SetResolution(self.electrodeWidth / self.imagingDims[0],\
+                                     self.electrodeLength / self.imagingDims[1])
 
-        electrodeMapper = vtk.vtkPolyDataMapper()
-        electrodeMapper.SetInput(self.electrodePD)
+        self.electrodePlane.Update()
 
-        self.SetMapper(electrodeMapper)
-        self.GetProperty().SetColor(1, 1, 0)
+        self.electrodeMapper = vtk.vtkPolyDataMapper()
+        self.electrodeMapper.SetInput(self.electrodePlane.GetOutput())
+
+        self.electrodePlaneActor = vtk.vtkActor()
+        self.electrodePlaneActor.PickableOff()
+        self.electrodePlaneActor.SetMapper(self.electrodeMapper)
+        self.electrodePlaneActor.GetProperty().SetColor(1, 0, 1)
+        self.electrodePlaneActor.GetProperty().SetOpacity(1.0)
+        self.electrodePlaneActor.SetPosition(0, 0, 0)
 
     def __channelActor(self, pos_x, pos_y, pos_z):
         channelCyl = vtk.vtkCylinderSource()
@@ -70,6 +85,7 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         channelCylActor = vtk.vtkActor()
         channelCylActor.SetMapper(channelCylMapper)
         channelCylActor.GetProperty().SetColor(1.0, 1.0, 0)
+        channelCylActor.GetProperty().SetOpacity(0.5)
         channelCylActor.SetPosition(pos_x, pos_y, pos_z)
 
         return channelCylActor
@@ -81,20 +97,11 @@ class ElectrodeGrid2(vtk.vtkAssembly):
         the render window
         """
         self.SetPosition(x_c + 5, y_c + 5, z_c + 5)
+        self.__UpdateChanPolyData()
 
-    def Pitch(self):
-        self.RotateX(5)
 
-    def Roll(self):
-        self.RotateY(5)
-
-    def Yaw(self):
-        self.RotateZ(5)
-
-    def RegisterGrid(self, brain_surface):
-
-        # Create a vtkPoints containing channel center locations
-        self.channelPoints = vtk.vtkPoints()
+    def __ResetChanPolyData(self):
+        channelPoints = vtk.vtkPoints()
         self.channelPolyData = vtk.vtkPolyData()
 
         chanID = 0
@@ -103,55 +110,111 @@ class ElectrodeGrid2(vtk.vtkAssembly):
                 x = widthPos * self.channelSpacing / self.imagingDims[0]
                 z = lengthPos * self.channelSpacing / self.imagingDims[0]
                 y = 0.0
-                self.channelPoints.InsertPoint(chanID, x, y, z)
+                channelPoints.InsertPoint(chanID, x, y, z)
                 chanID = chanID + 1
-        self.channelPolyData.SetPoints(self.channelPoints)
-
-        transMat = self.GetMatrix()
-
-        allAssemblyTransform = vtk.vtkTransform()
-        allAssemblyTransform.SetMatrix(transMat)
-        allAssemblyTransform.Update()
-
-        allAssemblyTransFilt = vtk.vtkTransformPolyDataFilter()
-        allAssemblyTransFilt.SetInput(self.channelPolyData)
-        allAssemblyTransFilt.SetTransform(allAssemblyTransform)
-        allAssemblyTransFilt.Update()
+        self.channelPolyData.SetPoints(channelPoints)
 
 
-        #### MAKE SURE TRANSFORMATION ACTUALLY WORKS.
+    def __UpdateChanPolyData(self):
         """
-        pd = allAssemblyTransFilt.GetOutput()
+        Update the positions of the channels in the plane after translation,
+        rotation of the electrode assembly
+        """
 
+        self.__ResetChanPolyData()
+
+        # Get a transformation matrix and transform based on electrode assembly
+        transMat = self.GetMatrix()
+        self.allAssemblyTransform = vtk.vtkTransform()
+        self.allAssemblyTransform.SetMatrix(transMat)
+        self.allAssemblyTransform.Update()
+
+        # Update channel polydata by Transforming with Tmatx
+        transFilt = vtk.vtkTransformPolyDataFilter()
+        transFilt.SetInput(self.channelPolyData)
+        transFilt.SetTransform(self.allAssemblyTransform)
+        transFilt.Update()
+
+        self.channelPolyData = transFilt.GetOutput()
+
+
+    def Pitch(self):
+        self.RotateX(5)
+        self.__UpdateChanPolyData()
+
+    def Roll(self):
+        self.RotateY(5)
+        self.__UpdateChanPolyData()
+
+    def Yaw(self):
+        self.RotateZ(5)
+        self.__UpdateChanPolyData()
+
+    def __pca(self, A):
+        # Get dimensions
+        num_data, dim = A.shape
+
+        # center data
+        mean_A = A.mean(axis=0)
+        for i in range(num_data):
+            A[i] -= mean_A
+
+        u, s, v = np.linalg.svd(A)
+
+        return v
+
+    def RegisterGrid(self, brain_surface):
+        """
+        #### MAKE SURE CHANNEL TRANSFORM WORKS
         transformAssembly = vtk.vtkAssembly()
-        for chanIdx in range(pd.GetNumberOfPoints()):
+        for chanIdx in range(self.channelPolyData.GetNumberOfPoints()):
             point = [0, 0, 0]
-            pd.GetPoint(chanIdx, point)
+            self.channelPolyData.GetPoint(chanIdx, point)
             regChan = self.__channelActor(point[0], point[1], point[2])
             transformAssembly.AddPart(regChan)
-
         return transformAssembly
-        """
         ####
+        """
 
-        self.chanAssemblyTransformed = vtk.vtkAssembly()
-        currentChannelPolyData = allAssemblyTransFilt.GetOutput()
+        self.__ResetChanPolyData()
+        self.__UpdateChanPolyData()
 
-        corticalSurfaceLocator = vtk.vtkPointLocator()
-        corticalSurfaceLocator.SetDataSet(brain_surface.GetOutput())
-        corticalSurfaceLocator.BuildLocator()
-
-        for chanIdx in range(currentChannelPolyData.GetNumberOfPoints()):
+        # Compute PCA to find the plane
+        pointMat = np.mat(\
+                   np.zeros(\
+                   shape = (self.channelPolyData.GetNumberOfPoints(), 3)))
+        for chanIdx in range(self.channelPolyData.GetNumberOfPoints()):
             point0 = [0, 0, 0]
-            point1 = [0, 0, 0]
-            currentChannelPolyData.GetPoint(chanIdx, point0)
-            cortChanId = corticalSurfaceLocator.FindClosestPoint(point0)
-            brain_surface.GetOutput().GetPoint(cortChanId, point1)
-            #print point0, point1
+            self.channelPolyData.GetPoint(chanIdx, point0)
+            pointMat[chanIdx] = point0
 
-            newChan = self.__channelActor(point1[0], point1[1], point1[2])
-            self.chanAssemblyTransformed.AddPart(newChan)
+        planeVectors = self.__pca(pointMat)
+        normalVector = planeVectors[:, 2]
 
+        # Normal line extending from each channel 
+        lineNormalAssembly = vtk.vtkAssembly()
+        for chanIdx in range(self.channelPolyData.GetNumberOfPoints()):
+            lineSource = vtk.vtkLineSource()
+
+            lineSource.SetPoint1(pointMat[chanIdx, 0],\
+                                 pointMat[chanIdx, 1],\
+                                 pointMat[chanIdx, 2])
+            lineSource.SetPoint2(normalVector * 40)
+            lineMapper = vtk.vtkPolyDataMapper()
+            lineMapper.SetInput(lineSource.GetOutput())
+            lineActor = vtk.vtkActor()
+            lineActor.SetMapper(lineMapper)
+            lineActor.GetProperty().SetColor(1, 0, 1)
+            lineNormalAssembly.AddPart(lineActor)
+
+        return lineNormalAssembly
+
+
+            # TODO: CALCULATE PCA OF THIS "PLANE" USING 
+            # TODO: THIRD PC IS NORMAL VECTOR
+            # TODO: PROJECT THE NORMAL VECTOR FROM EACH POINT UNTIL IT INTERSECTS
+            #       A POINT/CELL/PLANE ASSOCIATED WITH THE CORTICAL SURFACE
+            #       THIS INTERSECTION POINT IS THE POSITION OF THE NEW ELECTRODE
 
 
 class ElectrodeGrid(vtk.vtkAssembly):

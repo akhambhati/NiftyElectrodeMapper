@@ -49,6 +49,14 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         ren = vtk.vtkRenderer()
         self.GetRenderWindow().AddRenderer(ren)
 
+
+        #----------------------------------------------------------------------
+        # Show axes
+        axes = vtk.vtkAxesActor()
+        transform = vtk.vtkTransform()
+        axes.SetTotalLength(60.0, 60.0, 60.0)
+        ren.AddViewProp(axes)
+
         #----------------------------------------------------------------------
         # Setup Surface Rendering
         myPatient = Cortex(brain_data)
@@ -69,7 +77,7 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             print "No electrode CT data specified"
 
         # Use the trackball camera for interaction
-        style = vtk.vtkInteractorStyleTrackballCamera()
+        style = vtk.vtkInteractorStyleTrackballCamera()
         self.SetInteractorStyle(style)
 
         #----------------------------------------------------------------------
@@ -100,17 +108,19 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             electPicker.PickProp(x, y, ren, newElectrode.channelActors)
             # picker returns None when an actor not in channelActors is picked
             if electPicker.GetActor() is not None:
-                newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
+                myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
                     deleteCursor = 1)
             else:
-                newElectrode.UpdateChannelCursor(p[0], p[1], p[2],\
+                myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
                     deleteCursor = 0)
             myGrid.UpdateChannelCursor(p[0], p[1], p[2])
+            """
             try:
                 ren.RemoveActor(myGrid.chanAssemblyTransformed)
             finally:
                 myGrid.RegisterGrid(myPatient.cortexExtractor)
                 ren.AddViewProp(myGrid.chanAssemblyTransformed)
+            """
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
@@ -121,9 +131,9 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             ren.AddViewProp(\
                     newElectrode.AddChannelRepresentationActor(\
                     p[0], p[1], p[2]))
-            myGrid.RegisterGrid(myPatient.cortexExtractor)
-            newGrid = myGrid.chanAssemblyTransformed
-            ren.AddViewProp(newGrid)
+            ren.AddViewProp(myGrid.RegisterGrid(myPatient.cortexExtractor))
+            #newGrid = myGrid.chanAssemblyTransformed
+            #ren.AddViewProp(newGrid)
             wxVTKRenderWindowInteractor.Render()
 
         def rightClickMouse(wxVTKRenderWindowInteractor, events=""):
@@ -199,6 +209,7 @@ if __name__ == '__main__':
         print brain_data_filename
         raw_data = NIfTI.ReadFile(brain_data_filename)
         brain_data = vtkImageImportFromArray()
+        #brain_data.SetDataSpacing([1.5, 0.9375, 0.9375])
         brain_data.SetArray(raw_data.get_data())
 
         print raw_data
