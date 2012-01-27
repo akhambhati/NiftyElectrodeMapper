@@ -54,8 +54,10 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Show axes
         axes = vtk.vtkAxesActor()
         transform = vtk.vtkTransform()
+        transform.Translate(-100, -100, -100)
         axes.SetTotalLength(60.0, 60.0, 60.0)
-        ren.AddViewProp(axes)
+        axes.SetUserTransform(transform)
+        #ren.AddViewProp(axes)
 
         #----------------------------------------------------------------------
         # Setup Surface Rendering
@@ -86,7 +88,6 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         myPatient.SurfacePicker()
         posPicker.AddLocator(myPatient.cortexLocator)
 
-        # Electrode Actor Picker
         electPicker = vtk.vtkPropPicker()
 
         # Electrode class instance, there should be one instance for each
@@ -97,7 +98,6 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Add a electrode placement cursor to the window
         ren.AddViewProp(newElectrode.channelCursor)
 
-
         def MoveCursor(wxVTKRenderWindowInteractor, events=""):
             # Function for replacing mouse cursor with channel cursor (sphere)
             self.GetRenderWindow().HideCursor()
@@ -106,21 +106,33 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             p = posPicker.GetPickPosition()
             # only actors in the channelActors collection are pickable
             electPicker.PickProp(x, y, ren, newElectrode.channelActors)
-            # picker returns None when an actor not in channelActors is picked
-            if electPicker.GetActor() is not None:
-                myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
-                    deleteCursor = 1)
-            else:
-                myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
-                    deleteCursor = 0)
-            myGrid.UpdateChannelCursor(p[0], p[1], p[2])
-            """
             try:
-                ren.RemoveActor(myGrid.chanAssemblyTransformed)
+                ren.RemoveActor(myGrid.lineNormalAssembly)
             finally:
-                myGrid.RegisterGrid(myPatient.cortexExtractor)
-                ren.AddViewProp(myGrid.chanAssemblyTransformed)
-            """
+                # picker returns None when an actor not in channelActors is picked
+                if electPicker.GetActor() is not None:
+                    myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
+                        deleteCursor = 1)
+                else:
+                    myGrid.UpdateChannelCursor(p[0], p[1], p[2],\
+                        deleteCursor = 0)
+                ren.AddViewProp(myGrid.lineNormalAssembly)
+
+                """
+                THIS CODE SEGMENT DEMONSTRATES CHECKING TO SEE IF POINTS ARE
+                INSIDE THE BRAIN SURFACE
+                """
+                insideChecker = vtk.vtkSelectEnclosedPoints()
+                insideChecker.SetInput(myGrid.channelPolyData) 
+                insideChecker.SetSurface(myPatient.cortexExtractor.GetOutput())
+                insideChecker.Update()
+                insidePts = insideChecker.GetOutput().GetPointData().GetArray('SelectedPoints')
+                for i in range(insidePts.GetNumberOfTuples()):
+                    if insidePts.GetComponent(i, 0):
+                        print i
+                    else:
+                        print "-3042"
+
             wxVTKRenderWindowInteractor.Render()
 
         def middleClickMouse(wxVTKRenderWindowInteractor, events=""):
@@ -185,15 +197,21 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
 
 
             if key_code == ord('Z') or key_code == ord('z'):
+                ren.RemoveActor(myGrid.lineNormalAssembly)
                 myGrid.Pitch()
+                ren.AddViewProp(myGrid.lineNormalAssembly)
                 ren.GetRenderWindow().Render()
 
             if key_code == ord('X') or key_code == ord('x'):
+                ren.RemoveActor(myGrid.lineNormalAssembly)
                 myGrid.Yaw()
+                ren.AddViewProp(myGrid.lineNormalAssembly)
                 ren.GetRenderWindow().Render()
 
             if key_code == ord('C') or key_code == ord('c'):
+                ren.RemoveActor(myGrid.lineNormalAssembly)
                 myGrid.Roll()
+                ren.AddViewProp(myGrid.lineNormalAssembly)
                 ren.GetRenderWindow().Render()
 
         parent.Bind(wx.EVT_KEY_UP, OnKeyPress)
