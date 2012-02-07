@@ -29,11 +29,11 @@ class CTElectrode(vtk.vtkLODActor):
         # surface contours with incremental values
         self.electrodeExtractor = vtk.vtkDiscreteMarchingCubes()
         self.electrodeExtractor.SetInput(electrode_data.GetOutput())
-        self.electrodeExtractor.GenerateValues(1, 0, 42)
-        """        self.electrodeExtractor.GenerateValues(1,\
+        #self.electrodeExtractor.GenerateValues(1, 0, 42)
+        self.electrodeExtractor.GenerateValues(1,\
                 np.min(electrode_data.GetArray()),\
                 np.max(electrode_data.GetArray()))
-        """
+
         self.electrodeMapper = vtk.vtkPolyDataMapper()
         self.electrodeMapper.SetInputConnection(\
                 self.electrodeExtractor.GetOutputPort())
@@ -45,6 +45,28 @@ class CTElectrode(vtk.vtkLODActor):
         self.SetMapper(self.electrodeMapper)
         self.SetProperty(self.electrodeProperty)
         self.electrodeExtractor.Update()
+
+
+        self.grid = vtk.vtkAssembly()
+        print np.unique(electrode_data.GetArray())
+        for segLabel in np.unique(electrode_data.GetArray()):
+            if segLabel > 0:
+                x,y,z = np.nonzero(electrode_data.GetArray() == segLabel)
+                sphere = vtk.vtkSphereSource()
+                sphere.SetRadius(2)
+
+                sphereMap = vtk.vtkPolyDataMapper()
+                sphereMap.SetInput(sphere.GetOutput())
+
+                sphereActor = vtk.vtkActor()
+                sphereActor.SetMapper(sphereMap)
+                sphereActor.GetProperty().SetColor(1.0, 0.0, 1.0)
+                sphereActor.SetPosition(0.9375*np.mean(z),\
+                                        0.9375*np.mean(y),\
+                                        1.5*np.mean(x))
+
+                self.grid.AddPart(sphereActor)
+
 
 class MappedElectrode:
     """
