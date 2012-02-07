@@ -57,7 +57,8 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         print elec_ct_data
         if elec_ct_data is not None:
             myElectrodeCT = CTElectrode(elec_ct_data)
-            ren.AddViewProp(myElectrodeCT)
+            #ren.AddViewProp(myElectrodeCT)
+            ren.AddViewProp(myElectrodeCT.grid)
         else:
             print "No electrode CT data specified"
 
@@ -169,7 +170,8 @@ if __name__ == '__main__':
         print brain_data_filename
         raw_data = NIfTI.ReadFile(brain_data_filename).get_data()
         brain_data = vtkImageImportFromArray()
-        brain_data.SetArray(raw_data)
+        brain_data.SetDataSpacing((0.9375,  0.9375,  1.5))
+        brain_data.SetArray(raw_data.transpose())
     except:
         print 'Could not import brain NIfTI!'
         exit(1)
@@ -187,7 +189,8 @@ if __name__ == '__main__':
         print electrode_data_filename
         raw_data = NIfTI.ReadFile(electrode_data_filename).get_data()
         elect_data = vtkImageImportFromArray()
-        elect_data.SetArray(raw_data)
+        elect_data.SetDataSpacing((0.9375, 0.9375, 1.5))
+        elect_data.SetArray(raw_data.transpose())
     except:
         elect_data = None
         print 'Could not import electrode NIfTI!'
