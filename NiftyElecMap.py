@@ -52,6 +52,24 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         myPatient = Cortex(brain_data)
         ren.AddViewProp(myPatient)
 
+        print myPatient.cortexExtractor
+
+        #----------------------------------------------------------------------
+        # DIJKSTRA ALGORITHM TESTER -------------------------------------------
+        djk = vtk.vtkDijkstraGraphGeodesicPath()
+        djk.SetInputConnection(myPatient.cortexExtractor.GetOutputPort())
+        djk.SetStartVertex(0)
+        djk.SetEndVertex(1000)
+        djk.Update()
+
+        pathMapper = vtk.vtkPolyDataMapper()
+        pathMapper.SetInputConnection(djk.GetOutputPort())
+        pathActor = vtk.vtkActor()
+        pathActor.SetMapper(pathMapper)
+        pathActor.GetProperty().SetColor(1,0,0)
+        pathActor.GetProperty().SetLineWidth(4)
+        ren.AddViewProp(pathActor)
+
         #---------------------------------------------------------------------
         # Check and render segmented electrode CT surface
         print elec_ct_data
