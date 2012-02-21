@@ -16,6 +16,8 @@ import csv
 import numpy as np
 
 
+
+
 class CTElectrode(vtk.vtkLODActor):
     """
     Actor class for rendering CT-based electrodes
@@ -29,7 +31,6 @@ class CTElectrode(vtk.vtkLODActor):
         # surface contours with incremental values
         self.electrodeExtractor = vtk.vtkDiscreteMarchingCubes()
         self.electrodeExtractor.SetInput(electrode_data.GetOutput())
-        #self.electrodeExtractor.GenerateValues(1, 0, 42)
         self.electrodeExtractor.GenerateValues(1,\
                 np.min(electrode_data.GetArray()),\
                 np.max(electrode_data.GetArray()))
@@ -48,6 +49,8 @@ class CTElectrode(vtk.vtkLODActor):
 
 
         self.grid = vtk.vtkAssembly()
+        self.electrodePolyData = vtk.vtkPolyData()
+        electrodePoints = vtk.vtkPoints()
         print np.unique(electrode_data.GetArray())
         for segLabel in np.unique(electrode_data.GetArray()):
             if segLabel > 0:
@@ -66,6 +69,11 @@ class CTElectrode(vtk.vtkLODActor):
                                         1.5*np.mean(x))
 
                 self.grid.AddPart(sphereActor)
+
+                electrodePoints.InsertNextPoint(0.9375*np.mean(z),\
+                                             0.9375*np.mean(y),\
+                                             1.5*np.mean(x))
+        self.electrodePolyData.SetPoints(electrodePoints)
 
 
 class MappedElectrode:
