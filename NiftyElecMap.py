@@ -52,23 +52,8 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         myPatient = Cortex(brain_data)
         ren.AddViewProp(myPatient)
 
-        print myPatient.cortexExtractor
-
-        #----------------------------------------------------------------------
-        # DIJKSTRA ALGORITHM TESTER -------------------------------------------
-        djk = vtk.vtkDijkstraGraphGeodesicPath()
-        djk.SetInputConnection(myPatient.cortexExtractor.GetOutputPort())
-        djk.SetStartVertex(0)
-        djk.SetEndVertex(1000)
-        djk.Update()
-
-        pathMapper = vtk.vtkPolyDataMapper()
-        pathMapper.SetInputConnection(djk.GetOutputPort())
-        pathActor = vtk.vtkActor()
-        pathActor.SetMapper(pathMapper)
-        pathActor.GetProperty().SetColor(1,0,0)
-        pathActor.GetProperty().SetLineWidth(4)
-        ren.AddViewProp(pathActor)
+        pdata = myPatient.cortexExtractor.GetOutput()
+        print pdata.GetNumberOfPoints()
 
         #---------------------------------------------------------------------
         # Check and render segmented electrode CT surface
@@ -83,6 +68,29 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Use the trackball camera for interaction
         style = vtk.vtkInteractorStyleTrackballCamera()
         self.SetInteractorStyle(style)
+
+        #----------------------------------------------------------------------
+        # ELECTRODE CONTACT DELAUNAY TRIANGULATION ----------------------------
+        deln = vtk.vtkDelaunay3D()
+        deln.SetInput(myElectrodeCT.electrodePolyData)
+        deln.SetTolerance(0.01)
+        tmapper = vtk.vtkTextureMapToSphere()
+        tmapper.SetInputConnection(deln.GetOutputPort())
+        #tmapper.PreventSeamOn()
+        mapper = vtk.vtkDataSetMapper()
+        mapper.SetInputConnection(tmapper.GetOutputPort())
+
+        # TEST TEXTURE PART
+        bmpReader = vtk.vtkBMPReader()
+        bmpReader.SetFileName("testTexture.bmp")
+        atext = vtk.vtkTexture()
+        atext.SetInputConnection(bmpReader.GetOutputPort())
+
+        triangulation = vtk.vtkActor()
+        triangulation.SetMapper(mapper)
+        triangulation.SetTexture(atext)
+        triangulation.GetProperty().SetOpacity(0.4444)
+        ren.AddViewProp(triangulation)
 
         #----------------------------------------------------------------------
         # Cortical Surface Picking
