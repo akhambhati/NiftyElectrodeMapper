@@ -14,7 +14,7 @@ import csv
 
 # Scientific Libraries
 import numpy as np
-
+import random
 
 
 
@@ -23,6 +23,24 @@ class CTElectrode(vtk.vtkLODActor):
     Actor class for rendering CT-based electrodes
     """
     def __init__(self, electrode_data):
+
+        def __pca(A):
+            """
+            Principal Component Analaysis
+            """
+            # Get Dimensions
+            num_data, dim = A.shape
+
+            # Center data
+            mean_A = A.mean(axis=0)
+            for i in range(num_data):
+                A[i] -= mean_A
+
+            u,s,v = np.linalg.svd(A)
+
+            normPos = s.argmin()
+            return v[:, normPos]
+
         """
         Setup Surface Rendering
         """
@@ -47,33 +65,81 @@ class CTElectrode(vtk.vtkLODActor):
         self.SetProperty(self.electrodeProperty)
         self.electrodeExtractor.Update()
 
-
         self.grid = vtk.vtkAssembly()
         self.electrodePolyData = vtk.vtkPolyData()
         electrodePoints = vtk.vtkPoints()
-        print np.unique(electrode_data.GetArray())
+        ePointMat = np.mat(np.zeros(shape = (36, 3)))
+        chanIdx = 0
         for segLabel in np.unique(electrode_data.GetArray()):
-            if segLabel > 0:
+            # This is hacked for MAYO34 in order to show just the 6x6 grid
+            sphere = vtk.vtkSphereSource()
+            sphere.SetRadius(2)
+
+            sphereMap = vtk.vtkPolyDataMapper()
+            sphereMap.SetInput(sphere.GetOutput())
+
+            if (segLabel > 0 and segLabel < 37):
                 x,y,z = np.nonzero(electrode_data.GetArray() == segLabel)
-                sphere = vtk.vtkSphereSource()
-                sphere.SetRadius(2)
+                nx = 0.9375*np.mean(z)
+                ny = 0.9375*np.mean(y)
+                nz = 1.5*np.mean(x)
 
-                sphereMap = vtk.vtkPolyDataMapper()
-                sphereMap.SetInput(sphere.GetOutput())
+                ePointMat[chanIdx] = [nx, ny, nz]
+                chanIdx = chanIdx + 1
+        normalVector = __pca(ePointMat.copy())
 
-                sphereActor = vtk.vtkActor()
-                sphereActor.SetMapper(sphereMap)
-                sphereActor.GetProperty().SetColor(1.0, 0.0, 1.0)
-                sphereActor.SetPosition(0.9375*np.mean(z),\
-                                        0.9375*np.mean(y),\
-                                        1.5*np.mean(x))
+        for chan in range(chanIdx):
+            xx = ePointMat[chan, 0]
+            yy = ePointMat[chan, 1]
+            zz = ePointMat[chan, 2]
 
-                self.grid.AddPart(sphereActor)
+            sphereActor = vtk.vtkOpenGLActor()
+            sphereActor.SetMapper(sphereMap)
+            sphereActor.GetProperty().SetColor(1.0, 0.0, 1.0)
+            sphereActor.SetPosition(xx - 0 * normalVector[0],\
+                                    yy - 0 * normalVector[1],\
+                                    zz - 0 * normalVector[2])
 
-                electrodePoints.InsertNextPoint(0.9375*np.mean(z),\
-                                             0.9375*np.mean(y),\
-                                             1.5*np.mean(x))
+            electrodePoints.InsertNextPoint(xx - 0 * normalVector[0],\
+                                            yy - 0 * normalVector[1],\
+                                            zz - 0 * normalVector[2])
+            self.grid.AddPart(sphereActor)
+
         self.electrodePolyData.SetPoints(electrodePoints)
+        self.GridSurface()
+
+    def GridSurface(self):
+        #----------------------------------------------------------------------
+        # ELECTRODE CONTACT DELAUNAY TRIANGULATION ----------------------------
+        deln = vtk.vtkDelaunay3D()
+        deln.SetInput(self.electrodePolyData)
+        deln.SetTolerance(0.01)
+        tmapper = vtk.vtkTextureMapToSphere()
+        tmapper.SetInputConnection(deln.GetOutputPort())
+        #tmapper.PreventSeamOn()
+        mapper = vtk.vtkDataSetMapper()
+        mapper.SetInputConnection(tmapper.GetOutputPort())
+
+        # TEST TEXTURE PART
+        atext = vtk.vtkOpenGLTexture()
+
+        self.contactScalarData = vtk.vtkDoubleArray()
+        self.contactScalarData.SetNumberOfComponents(1)
+        for tupleID in range(self.electrodePolyData.GetNumberOfPoints()):
+            self.contactScalarData.InsertNextValue(random.uniform(0, 1))
+
+        self.UpdateGridSurface()
+        atext.SetInput(self.electrodePolyData)
+        self.triangulation = vtk.vtkOpenGLActor()
+        self.triangulation.SetMapper(mapper)
+        self.triangulation.SetTexture(atext)
+        self.triangulation.GetProperty().SetOpacity(1)
+
+    def UpdateGridSurface(self):
+        for tupleID in range(self.contactScalarData.GetNumberOfTuples()):
+            self.contactScalarData.SetTuple1(tupleID, random.uniform(0,1))
+        self.electrodePolyData.GetPointData().SetScalars(self.contactScalarData)
+        self.electrodePolyData.Modified()
 
 
 class MappedElectrode:
