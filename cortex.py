@@ -7,7 +7,7 @@ VTK-based surface rendering of cortex region
 import vtk
 
 
-class Cortex(vtk.vtkLODActor):
+class Cortex(vtk.vtkOpenGLActor):
     def __init__(self, brain_data, isoval=34):
         # Setup Surface Rendering
 
