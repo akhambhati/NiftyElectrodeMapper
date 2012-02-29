@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+!/usr/bin/env python
 """
 A tool for plotting and mapping representative electrode channels on cortical
 surface renderings.
@@ -44,16 +44,13 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
         # Renderer and Interactor
         wxVTKRenderWindowInteractor.__init__(self, parent, -1,\
                 size=parent.GetSize())
-        ren = vtk.vtkRenderer()
+        ren = vtk.vtkOpenGLRenderer()
         self.GetRenderWindow().AddRenderer(ren)
 
         #----------------------------------------------------------------------
         # Setup Surface Rendering
         myPatient = Cortex(brain_data)
         ren.AddViewProp(myPatient)
-
-        pdata = myPatient.cortexExtractor.GetOutput()
-        print pdata.GetNumberOfPoints()
 
         #---------------------------------------------------------------------
         # Check and render segmented electrode CT surface
@@ -62,35 +59,13 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
             myElectrodeCT = CTElectrode(elec_ct_data)
             #ren.AddViewProp(myElectrodeCT)
             ren.AddViewProp(myElectrodeCT.grid)
+            ren.AddViewProp(myElectrodeCT.triangulation)
         else:
             print "No electrode CT data specified"
 
         # Use the trackball camera for interaction
         style = vtk.vtkInteractorStyleTrackballCamera()
         self.SetInteractorStyle(style)
-
-        #----------------------------------------------------------------------
-        # ELECTRODE CONTACT DELAUNAY TRIANGULATION ----------------------------
-        deln = vtk.vtkDelaunay3D()
-        deln.SetInput(myElectrodeCT.electrodePolyData)
-        deln.SetTolerance(0.01)
-        tmapper = vtk.vtkTextureMapToSphere()
-        tmapper.SetInputConnection(deln.GetOutputPort())
-        #tmapper.PreventSeamOn()
-        mapper = vtk.vtkDataSetMapper()
-        mapper.SetInputConnection(tmapper.GetOutputPort())
-
-        # TEST TEXTURE PART
-        bmpReader = vtk.vtkBMPReader()
-        bmpReader.SetFileName("testTexture.bmp")
-        atext = vtk.vtkTexture()
-        atext.SetInputConnection(bmpReader.GetOutputPort())
-
-        triangulation = vtk.vtkActor()
-        triangulation.SetMapper(mapper)
-        triangulation.SetTexture(atext)
-        triangulation.GetProperty().SetOpacity(0.4444)
-        ren.AddViewProp(triangulation)
 
         #----------------------------------------------------------------------
         # Cortical Surface Picking
@@ -177,7 +152,11 @@ class ElectrodeMappingInteractor(wxVTKRenderWindowInteractor):
 
             # Press 'UP ARROW' to increase opacity of cortex surface
             if key_code == wx.WXK_UP:
-                myPatient.SetOpacityUp()
+                #myPatient.SetOpacityUp()
+                for i in range(100):
+                    myElectrodeCT.UpdateGridSurface()
+                    self.Render()
+
 
             # Press 'DOWN ARROW' to decrease opacity of cortex surface
             if key_code == wx.WXK_DOWN:
