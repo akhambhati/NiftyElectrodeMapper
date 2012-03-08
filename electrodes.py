@@ -114,9 +114,11 @@ class CTElectrode(vtk.vtkLODActor):
         deln = vtk.vtkDelaunay3D()
         deln.SetInput(self.electrodePolyData)
         deln.SetTolerance(0.01)
+
         tmapper = vtk.vtkTextureMapToSphere()
         tmapper.SetInputConnection(deln.GetOutputPort())
-        #tmapper.PreventSeamOn()
+        tmapper.PreventSeamOn()
+
         mapper = vtk.vtkDataSetMapper()
         mapper.SetInputConnection(tmapper.GetOutputPort())
 
@@ -127,17 +129,47 @@ class CTElectrode(vtk.vtkLODActor):
         self.contactScalarData.SetNumberOfComponents(1)
         for tupleID in range(self.electrodePolyData.GetNumberOfPoints()):
             self.contactScalarData.InsertNextValue(random.uniform(0, 1))
+        self.electrodePolyData.GetPointData().SetScalars(self.contactScalarData)
+        self.electrodePolyData.Modified()
 
-        self.UpdateGridSurface()
+
+        # COLOR LOOKUP TABLE
+        ctf = vtk.vtkColorTransferFunction()
+        ctf.SetColorSpaceToDiverging()
+        ctf.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
+        ctf.AddRGBPoint(0.5, 0.5, 0.0, 0.0)
+        ctf.AddRGBPoint(1.0, 1.0, 0.0, 0.0)
+        lut = vtk.vtkLookupTable()
+        lutNum = 256
+        lut.SetNumberOfTableValues(lutNum)
+        for ii,ss in enumerate([float(xx)/float(lutNum) for xx in range(lutNum)]):
+            cc = ctf.GetColor(ss)
+            #lut.SetTableValue(ii, cc[0], cc[1], cc[2], 1.0)
+        lut.SetHueRange(0.0, 0.0)
+        lut.SetSaturationRange(1.0, 1.0)
+        lut.SetValueRange(0.0, 1.0)
+
         atext.SetInput(self.electrodePolyData)
+        mapper.SetLookupTable(lut)
         self.triangulation = vtk.vtkOpenGLActor()
         self.triangulation.SetMapper(mapper)
         self.triangulation.SetTexture(atext)
-        self.triangulation.GetProperty().SetOpacity(1)
+        self.triangulation.GetProperty().SetOpacity(0.7)
 
-    def UpdateGridSurface(self):
+        self.cbr = vtk.vtkScalarBarActor()
+        self.cbr.SetLookupTable(lut)
+        self.cbr.SetWidth(1.0)
+
+
+
+    def UpdateGridSurface(self, normalizedData):
+        # Hacked for MAYO34 GRID 2-34 of EEG channel data and 36 electrode spots
         for tupleID in range(self.contactScalarData.GetNumberOfTuples()):
-            self.contactScalarData.SetTuple1(tupleID, random.uniform(0,1))
+            if (tupleID == 0 or tupleID == 34 or tupleID == 35):
+                self.contactScalarData.SetTuple1(tupleID, 0.0)
+            else:
+                self.contactScalarData.SetTuple1(\
+                        tupleID, normalizedData[tupleID-1])
         self.electrodePolyData.GetPointData().SetScalars(self.contactScalarData)
         self.electrodePolyData.Modified()
 
